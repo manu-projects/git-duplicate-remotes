@@ -99,7 +99,7 @@
 ** Escenario
    #+BEGIN_SRC makefile
      # nos devuelve true ó false
-     CHECK_GIT_INITIALIZED=git rev-parse --is-inside-work-tree
+     GIT_INITIALIZED=git rev-parse --is-inside-work-tree
 
      # definimos la expresión que evalúa el ifneq (if not equal)
      # 1. $(shell) para ejecutar los comandos en la shell de bash (ó sh depende como lo configuramos)
@@ -178,3 +178,97 @@
       - agregarle una extensión para luego removerla no tiene mucho sentido
    #+END_QUOTE
 ** Referencias
+* Comando test de bash
+** Escenario
+   #+BEGIN_SRC makefile
+     DIRECTORIO=alumnos
+     ARCHIVO=algebra.txt
+
+     GIT_INITIALIZED=git rev-parse --is-inside-work-tree
+
+     BOX_CONFIRM_CLEAN=whiptail --title "Eliminar archivos actual" --yesno "Está seguro de confirmar la acción?" 0 0
+
+     # - el comando test es de la forma test condicion && ejecutar si condicion es true || ejecutando si condicion es false
+     # - utilizamos los paréntesis para agrupar las expresiones (no es necesario, pero se entiende mejor)
+     validar-git:
+       test $(shell $(GIT_INITIALIZED)) \
+       && (echo "GIT está inicializado, wow!" && git status) \
+       || (echo "GIT NO está inicializado, ups!" && git init)
+
+     # - si al comando test le pasamos el parámetro -d verifica la existencia de un directorio
+     validar-directorio:
+       @test -d $(DIRECTORIO) \
+       && echo "existe! :)" \
+       || echo "no existe.. :(" \
+
+     # - si al comando test le pasamos el parámetro -d verifica la existencia de un archivo
+     validar-archivo:
+       @test -f $(DIRECTORIO)/$(ARCHIVO) \
+       && echo "existe! :)" \
+       || echo "no existe.. :(" \
+
+     # Notas:
+     # 1. podríamos utilizar el operador pipe | y los comandos test, xargs y tee pero se complica la redirección del output del comando whiptail
+     # 2. utilizamos los operadores lógicos AND && y el OR ||
+     # 3. en el operador lógico OR devolvemos true para que GNU Make no lance una excepción
+     clean:
+       $(BOX_CONFIRM_CLEAN) \
+       && rm -rvf $(DIRECTORIO) .git \
+       || true
+
+     # regla para crear un directorio con el nombre con el valor de la expansión de la macro $(DIRECTORIO)
+     $(DIRECTORIO):
+       $(info Creando directorio $@..)
+       mkdir -p $@
+
+     # Notas sobre el target y las dependencias:
+     # - regla para crear un archivo con el nombre con el valor de la expansión de las macros $(DIRECTORIO) y $(ARCHIVO)
+     # - el target $(DIRECTORIO)/$(ARCHIVO) tiene como dependencia $(DIRECTORIO) es decir ésta dependencia se debe ejecutar primero,
+     # porque depende de ella para la creación del target
+     # - luego de crear la dependencia, se ejecutará la orden asociada la regla
+     #
+     # Notas de las macros especiales y las funciones de GNU Make:
+     # - $@ es una macro especial que devuelve el nombre del target es decir.. $(DIRECTORIO)/$(ARCHIVO)
+     # - $(dir carpeta-1/archivo.txt) devuelve el nombre del directorio de la ruta
+     # - $(notdir carpeta-1/archivo.txt) devuelve el nombre del archivo de la ruta
+     $(DIRECTORIO)/$(ARCHIVO): $(DIRECTORIO)
+       $(info Accediendo al directorio $(dir $@) para crear el archivo $(notdir $@)..)
+       cd $(dir $@) \
+       && touch $(notdir $@)
+
+     # Notas:
+     # 1. $< es una macro especial que devuelve la primer dependencia de la regla es decir $(DIRECTORIO)/$(ARCHIVO)
+     #
+     # 2. si hubiera más dependencias
+     # 2.1 necesitaríamos del comando de bash tee (porque redirecciona stdin a varios archivos)
+     # 2.2 y la macro especial $^ (porque devuelve el nombre de todas las dependencias)
+     cargar-datos: $(DIRECTORIO)/$(ARCHIVO)
+       echo "Pepito Gimenez, legajo 10200100" >> $<
+   #+END_SRC
+** Problema sin resolver
+   #+BEGIN_SRC makefile
+     # intentos fallidos
+     clean-1:
+       $(if $(shell $(BOX_CONFIRM_CLEAN) | tee >/dev/tty), echo "bien")
+
+     clean-2:
+       $(BOX_CONFIRM_CLEAN) \
+       | tee >/dev/tty \
+       | xargs test && echo "borrando archivos.." || echo "no borro nada"
+
+     clean-3:
+       $(BOX_CONFIRM_CLEAN) 3>&1 1>&2 2>&3 \
+       | xargs test && echo "borrando archivos.." || echo "no borro nada"
+   #+END_SRC
+** Referencias
+*** Referencias Oficiales
+    1. [[https://www.redhat.com/sysadmin/linux-shell-redirection-pipelining][Linux shell redirection pipelining (redhat.com)]]
+    2. [[https://tldp.org/LDP/abs/html/io-redirection.html][io redirection (tldp.org)]]
+*** Referencias Extraoficiales
+    1. [[https://www.thegeekdiary.com/test-command-examples-in-linux/][test command examples in linux (thegeekdiary.com)]]
+    2. [[https://www.rozmichelle.com/pipes-forks-dups/][pipes forks dups (rozmichelle.com)]]
+    3. [[https://distroid.net/xargs-command-linux/][xargs command linux (distroid.net)]]
+    4. [[https://til.codeinthehole.com/posts/how-to-use-xargs-with-printf/][how to use xargs with printf (til.codeinthehole.com)]]
+    5. [[https://blog.desdelinux.net/shell-bash-y-scripts-todo-sobre-shell-scripting/][shell bash y scripts todo sobre shell scripting (blog.desdelinux.net)]]
+*** Referencias Issues
+    1. [[https://unix.stackexchange.com/questions/42728/what-does-31-12-23-do-in-a-script][what does 3>&1 1>&2 2>&3 do in a script (unix.stackexchange.com)]]
