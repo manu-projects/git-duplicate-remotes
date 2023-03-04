@@ -95,7 +95,7 @@
 ** Referencias
 *** Referencias Issues
     1. [[https://askubuntu.com/questions/804667/remove-all-directories-from-within-a-parent-directory-except-one-and-its-descend][remove all directories from within a parent directory except one and its descend (askubuntu.com)]]
-* GNU Make if con comandos bash como expresiones
+* GNU Make ifeq con comandos bash como expresiones
 ** Escenario
    #+BEGIN_SRC makefile
      # nos devuelve true ó false
@@ -128,3 +128,53 @@
     1. [[https://stackoverflow.com/questions/2180270/check-if-current-directory-is-a-git-repository][Check if current directory is a git repository (stackoverflow.com)]]
     2. [[https://stackoverflow.com/questions/9008649/gnu-make-conditional-function-if-inside-a-user-defined-function-always-ev][GNU Make conditional function if inside a user defined function always (stackoverflow.com)]]
     3. [[https://unix.stackexchange.com/questions/640177/if-function-in-makefile-seems-to-disregard-conditional-and-executes-unexpectedly][if function in makefile seems to disgregard conditional and executes unexpectedly (unix.stackexchange.com)]]
+* Target de Seguimiento - Timestamp entre el target y sus dependencias
+** Escenario
+   #+BEGIN_QUOTE
+   Problemas que presenta la regla ~git-hooks-update~:
+   1) Copiamos los archivos cada vez que se instancie el target git-hooks-update (Ej. en la terminal make git-hooks-update),
+   2) Copiamos apesar de que NO hayan cambios en la carpeta git-hooks
+   #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+     COPY=rsync -avz
+     GIT_HOOKS = $(wildcard git-hooks/*)
+
+     git-hooks-update:
+       chmod u+x git-hooks/* \
+       && $(COPY) git-hooks/* ../.git/hooks
+   #+END_SRC
+** Solución 1 - Target de Seguimiento
+   #+BEGIN_QUOTE
+   Mejoras al problema anterior:
+   1) Si existe diferencias entre el *timestamp del target* y el *timetamp de sus dependencias*,
+      - se copian TODOS los archivos de ~git-hooks/~ al directorio padre (operación asociada la función ~foreach~)
+
+   2) Utilizamos lo que se llama un *target de seguimiento* (/un archivo vacío que se llamará git-hooks-update/)
+      - para marcar el último momento en el que se produjo un evento
+      - lo utilizamos sólo para comparar el timestamp de creación contra el timestamp de las dependencias
+      - las dependencias aparecen luego de evaluar y expandirse la macro ~$(GIT_HOOKS)~
+   #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+     COPY=rsync -avz
+     GIT_HOOKS = $(wildcard git-hooks/*)
+
+     .targets/git-hooks-update: $(GIT_HOOKS)
+     # 1. creamos el directorio que contiene a éste target (archivo)
+       $(MKDIR) $(dir $@) && touch $@
+     # 2. copiamos los archivos al directorio padre
+       $(foreach hook-file, $^,\
+         chmod u+x $(hook-file) && \
+         $(COPY) $(hook-file) ../.git/hooks; \
+       )
+   #+END_SRC
+** Otras Soluciones
+   #+BEGIN_QUOTE
+   Alternativas a la solución anterior:
+   1) una *regla EXPLÍCITA* del tipo ~../.git/hooks/pre-push: git-hooks/pre-push~ no me parece viable
+   2) una *regla IMPLÍCITA* podría implicar un sobrediseño porque..
+      - los ficheros NO tienen extensión
+      - agregarle una extensión para luego removerla no tiene mucho sentido
+   #+END_QUOTE
+** Referencias
