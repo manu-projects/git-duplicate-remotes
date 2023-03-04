@@ -95,3 +95,36 @@
 ** Referencias
 *** Referencias Issues
     1. [[https://askubuntu.com/questions/804667/remove-all-directories-from-within-a-parent-directory-except-one-and-its-descend][remove all directories from within a parent directory except one and its descend (askubuntu.com)]]
+* GNU Make if con comandos bash como expresiones
+** Escenario
+   #+BEGIN_SRC makefile
+     # nos devuelve true ó false
+     CHECK_GIT_INITIALIZED=git rev-parse --is-inside-work-tree
+
+     # definimos la expresión que evalúa el ifneq (if not equal)
+     # 1. $(shell) para ejecutar los comandos en la shell de bash (ó sh depende como lo configuramos)
+     # 2. cd .. accedemos al directorio padre de la ruta relativa
+     # 3. $(GIT_INITIALIZED) expandimos la macro que contiene el comando de git
+     # 4. 2>/dev/null redireccionamos la (stderr) la salida estándar de errores a /dev/null para que no aparezca en la pantalla
+     #
+     # Notas:
+     # 1. los condicionales ifeq y ifneq en GNU Make son de la forma ifeq (a,b) y ifneq(a,b)
+     # no valida si el valor de la expresión es booleana, hay que preguntarle si es true ó false
+     #
+     # 2. $(if condicion) valida su es true/false, pero su objetivo es otro..
+     # 2.1 es asignarle un valor a una macro según si se cumple la condición evaluada
+     # 2.2 podríamos utilizarlo pero quedaría todo muy compacto y no se entendería
+     git-init:
+     ifneq ($(shell cd .. && $(GIT_INITIALIZED) 2>/dev/null),true)
+       $(info Inicializando repositorio de git..)
+       $(AT)cd .. \
+       && git init
+     endif
+   #+END_SRC
+** Referencias
+*** Referencias Extraoficiales
+    1. [[https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78][GNU Make cheatsheet (gist.github.com/rueycheng)]]
+*** Referencias Issues
+    1. [[https://stackoverflow.com/questions/2180270/check-if-current-directory-is-a-git-repository][Check if current directory is a git repository (stackoverflow.com)]]
+    2. [[https://stackoverflow.com/questions/9008649/gnu-make-conditional-function-if-inside-a-user-defined-function-always-ev][GNU Make conditional function if inside a user defined function always (stackoverflow.com)]]
+    3. [[https://unix.stackexchange.com/questions/640177/if-function-in-makefile-seems-to-disregard-conditional-and-executes-unexpectedly][if function in makefile seems to disgregard conditional and executes unexpectedly (unix.stackexchange.com)]]
