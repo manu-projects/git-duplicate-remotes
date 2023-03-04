@@ -1,0 +1,97 @@
+#+TITLE: Documentation
+* Intro
+  #+BEGIN_QUOTE
+  Centralizamos los comentarios sobre las implementaciones en los Makefiles,
+  para separar la explicación de la implementación en si
+  #+END_QUOTE
+* GIT - Branch Upstream
+** Escenario
+  #+BEGIN_QUOTE
+  Supongamos que creamos un repositorio en github (éste es se considera un repositorio remoto),
+  entonces no tendría sentido ejecutar las siguientes lineas de comando
+  1) ~git fetch origin && git branch --set-upstream-to=origin/master~
+  2) ~git pull origin master~
+  #+END_QUOTE
+
+  #+BEGIN_QUOTE
+  NO tiene sentido ejecutar ~git fetch origin && git branch --set-upstream-to=origin/master~
+  1) porque aún NO existe una rama en el repositorio remoto (en github.com)
+  2) si no tiene una rama en el repositorio remoto, entonces tampoco tiene ningún commit (cambios confirmados subidos)
+
+  Por tanto es necesario ejecutar en la terminal de comandos ~git push --set-upstream~
+  #+END_QUOTE
+
+  #+BEGIN_QUOTE
+  NO tiene sentido ejecutar ~git pull origin master~
+  porque la operación ~pull~ es una combinación de ~git fetch~ seguido de ~git merge~
+  #+END_QUOTE
+** Referencias
+*** Referencias Oficiales
+    1. [[https://git-scm.com/book/es/v2/GitHub-Participando-en-Proyectos][Github participando en proyectos (git-scm.com)]]
+*** Referencias Extraoficiales
+    1. [[https://www.geeksforgeeks.org/how-to-set-upstream-branch-on-git/][20-02-2022, How to set upstream branch on git (geeksforgeeks.org)]]
+    2. [[https://mincong.io/2018/05/02/git-upstream-tracking/][15-08-2019, Git upstream tracking (mincong.io)]]
+*** Referencias Issues
+    1. [[https://stackoverflow.com/questions/37770467/why-do-i-have-to-git-push-set-upstream-origin-branch][Why do I have to git push set upstream origin branch (stackoverflow.com)]]
+* Comando rm - GNU Make Vs Bash
+** Escenario
+   #+BEGIN_QUOTE
+   1) estamos en la ruta ~/tmp/proyecto/sources~
+   2) queremos borrar todos los archivos y directorios que están en ~..~ es decir en el directorio padre ~/tmp/proyecto/~
+   3) pero..! queremos excluir ó ignorar el directorio ~sources~ en el que estamos ubicados
+   #+END_QUOTE
+** Solución 1 - Comando find de Bash
+  #+BEGIN_SRC makefile
+    PWD=$(shell pwd)
+    CURRENT_DIRECTORY_NAME = $(notdir $(PWD))
+
+    # hay lógica repetida si, pero el objetivo es otro
+    FIND_FILES_COMPLEMENT=find -mindepth 1 -maxdepth 1 -type f -not -name
+    FIND_DIRECTORIES_COMPLEMENT=find -mindepth 1 -maxdepth 1 -type d -not -name
+    FIND_RM= -exec rm -rf {} \;
+
+    clean:
+      cd .. \
+      && $(FIND_FILES_COMPLEMENT) $(CURRENT_DIRECTORY_NAME) $(FIND_RM) \
+      && $(FIND_DIRECTORIES_COMPLEMENT) $(CURRENT_DIRECTORY_NAME) $(FIND_RM)
+
+    create-files-directories:
+      cd .. \
+      && mkdir carpetita-1 carpetita-2 carpetita-3\
+      && touch archivo-1.txt archivo-2.txt archivo-3.txt
+
+    .PHONY: clean create-files-directories
+  #+END_SRC
+** Solución 2 - Función filter-out de GNU Make
+  #+BEGIN_SRC makefile
+    PWD=$(shell pwd)
+    CURRENT_DIRECTORY_NAME = $(notdir $(PWD))
+
+    # usamos la funciones wildcard y notdir
+    # 1. wildcard ../* para obtener los archivos y directorios de la ruta .. (directorio padre)
+    # 2. wildcard ../.* para obtener los archivos ocultos de la ruta .. (directorio padre)
+    # 3. notdir obtiene de una ruta A/B/C el nombre del directorio C
+    PARENT_DIRECTORY_FILES = $(notdir $(wildcard ../*) $(wildcard ../.*))
+
+    # 1. excluimos la ruta . (directorio actual), no queremos borrar la carpeta actual
+    # 2. excluimos la ruta .. (directorio padre del directorio padre),
+    # si la ruta es A/B/C estariamos borrando A y sólo queremos borrar B
+    EXCLUDED_FILES=$(CURRENT_DIRECTORY_NAME) . ..
+
+    # función filter-out de GNU Make
+    PARENT_DIRECTORY_FILES_FILTERED = $(filter-out $(EXCLUDED_FILES), $(PARENT_DIRECTORY_FILES))
+
+    clean:
+      cd .. \
+      && rm -rfv $(PARENT_DIRECTORY_FILES_FILTERED)
+
+    create-files-directories:
+      cd .. \
+      && mkdir carpetita-1 carpetita-2 carpetita-3\
+      && touch archivo-1.txt archivo-2.txt archivo-3.txt
+
+    .PHONY: clean create-files-directories
+  #+END_SRC
+** Referencias
+*** Referencias Issues
+    1. [[https://askubuntu.com/questions/804667/remove-all-directories-from-within-a-parent-directory-except-one-and-its-descend][remove all directories from within a parent directory except one and its descend (askubuntu.com)]]
