@@ -2,8 +2,7 @@
 -include config.cfg
 -include unix-utils.mk
 
-# TODO: validar la necesidad del chequeo
-CHECK_GIT_INITIALIZED=git rev-parse --is-inside-work-tree
+GIT_INITIALIZED=git rev-parse --is-inside-work-tree
 
 GIT_HOOKS = $(wildcard git-hooks/*)
 CURRENT_DIRECTORY_NAME = $(notdir $(PWD))
@@ -24,9 +23,11 @@ endif
 i init: git-init git-remotes-update git-pull git-push-upstream ## Agrega los repositorios remotos, descarga/sube de los remotos configurados
 
 git-init:
+ifneq ($(shell cd .. && $(GIT_INITIALIZED) 2>/dev/null),true)
 	$(info Inicializando repositorio de git..)
 	$(AT)cd .. \
 	&& git init
+endif
 
 p git-pull: ## descargar cambios del repositorio only-fetch
 	$(info Descargando cambios del repositorio only-fetch..)
