@@ -272,3 +272,55 @@
     5. [[https://blog.desdelinux.net/shell-bash-y-scripts-todo-sobre-shell-scripting/][shell bash y scripts todo sobre shell scripting (blog.desdelinux.net)]]
 *** Referencias Issues
     1. [[https://unix.stackexchange.com/questions/42728/what-does-31-12-23-do-in-a-script][what does 3>&1 1>&2 2>&3 do in a script (unix.stackexchange.com)]]
+* GNU Make ONESHELL ejecutar comandos en una shell
+** Escenario
+   #+BEGIN_QUOTE
+   Cada orden de éste target se ejecutará en una shell diferentes
+   - una shell imprimirá el string ~carpeta:~
+   - otra shell esperará del STDIN que ingresemos un valor que se asociará a la variable ~CARPETA~
+   - otra shell creará la carpeta con el valor asociado a la variable ~CARPETA~
+
+   Problemas:
+   - los comandos se ejecutarán en paralelo
+   - el comando ~mkdir~ no recibirá el valor de la variable ~CARPETA~
+   #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+	wrong-crear-carpeta:
+		@printf "carpeta: "
+		read CARPETA
+		mkdir $$CARPETA
+   #+END_SRC
+** Solución
+   #+BEGIN_QUOTE
+   Al agregar ~.ONESHELL:~
+   - todos los comandos asociadas los targets se ejecutarán en la misma shell
+   - no será necesario usar el operador logico AND ~&&~ para concatenar las operaciones
+   - no será necesario utilizar el slash invertido ~\~ ya que no necesitamos usar el ~&&~
+   #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+.ONESHELL:
+
+crear-archivo:
+	@printf "nombre del archivo: "
+	read ARCHIVO
+	touch $$ARCHIVO
+
+# si utilizamos ONESHELL, ya no sería necesario hacer esto
+	crear-carpeta:
+	@printf "archivo: " \
+	&& read CARPETA \
+	&& mkdir $$CARPETA
+
+	wrong-crear-carpeta:
+		@printf "carpeta: "
+		read CARPETA
+		mkdir $$CARPETA
+   #+END_SRC
+** Referencias
+*** Referencias Oficiales
+    1. [[https://www.gnu.org/software/make/manual/html_node/One-Shell.html][Using one shell (gnu.org)]]
+*** Referencias Extraoficiales
+    1. [[https://til.zqureshi.in/makefile-oneshell/][Makefile ONESHELL (til.zqureshi.in)]]
+    2. [[https://seanbone.ch/makefile-hacks/][Makefile hacks (seanbone.ch)]]
