@@ -72,14 +72,19 @@ git-push-upstream: .targets/git-hooks-update
 h help: ## Mostrar menú de ayuda
 	@awk 'BEGIN {FS = ":.*##"; printf "\nOpciones para usar:\n  make \033[36m\033[0m\n"} /^[$$()% 0-9a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-# TODO: validar si el comando `test` de bash no sería necesario, si el comando bash en BOX_CONFIRM_CLEAN es true
-# se evalúa la exprexión seguida de cada operador AND && pero.. si es false se evalúa la expresión seguida del operador OR ||
-#
 # Notas:
 # 1. el comando `find` de bash sería la alternativa para obtener los archivos del directorio padre e ignorar éste directorio
-# 2. en el operador OR || devolvemos true para evitar que el Makefile lance una excepción (error)
+#
+# 2. Estado de ejecución de un comando
+# 2.1 Si la ejecución de un comando tuvo éxito (succeed) retorna 0
+# 2.2 Si la ejecución de un comando NO tuvo éxito (failed) retorna un valor distinto de cero (non-zero)
+#
+# 3. el comando test hará que GNU Make lanze un error si no utilizamos el operador OR || para indicar que comando ejecutar si la condición no se cumple,
+# el número de error es el estado de salida 1 propio del comando test,
+# por eso en caso de no cumplirse la condición ($$? -eq 0) devolvemos el valor true
 clean: ## Eliminar archivos del directorio padre
 	$(AT)$(BOX_CONFIRM_CLEAN) \
+	&& test $$? -eq 0 \
 	&& echo "Eliminando archivos y directorios del directorio padre.." \
 	&& $(RM) .targets/* \
 	&& cd .. && $(RM) $(PARENT_DIRECTORY_FILES_FILTERED) \
