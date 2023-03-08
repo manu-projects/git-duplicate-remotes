@@ -74,20 +74,13 @@ h help: ## Mostrar menú de ayuda
 
 # Notas:
 # 1. el comando `find` de bash sería la alternativa para obtener los archivos del directorio padre e ignorar éste directorio
-#
-# 2. Estado de ejecución de un comando
-# 2.1 Si la ejecución de un comando tuvo éxito (succeed) retorna 0
-# 2.2 Si la ejecución de un comando NO tuvo éxito (failed) retorna un valor distinto de cero (non-zero)
-#
-# 3. el comando test hará que GNU Make lanze un error si no utilizamos el operador OR || para indicar que comando ejecutar si la condición no se cumple,
-# el número de error es el estado de salida 1 propio del comando test,
-# por eso en caso de no cumplirse la condición ($$? -eq 0) devolvemos el valor true
+# 2. Utilizamos el comando TEST (de linux) con la opción -eq porque éste se utiliza para comparar valores numéricos
 clean: ## Eliminar archivos del directorio padre
-	$(AT)$(BOX_CONFIRM_CLEAN) \
-	&& test $$? -eq 0 \
-	&& echo "Eliminando archivos y directorios del directorio padre.." \
-	&& $(RM) .targets/* \
-	&& cd .. && $(RM) $(PARENT_DIRECTORY_FILES_FILTERED) \
+	$(BOX_CONFIRM_CLEAN) \
+	&& test $(EXIT_STATUS) -eq $(EXIT_STATUS_SUCCESS) \
+	&& (echo "Eliminando archivos y directorios del directorio padre.." \
+			&& $(RM) .targets/* \
+			&& cd .. && $(RM) $(PARENT_DIRECTORY_FILES_FILTERED)) \
 	|| true
 
 .PHONY: i init clean h help git-init git-pull git-remotes-update git-push-upstream
