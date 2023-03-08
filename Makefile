@@ -76,7 +76,7 @@ h help: ## Mostrar menú de ayuda
 # 1. el comando `find` de bash sería la alternativa para obtener los archivos del directorio padre e ignorar éste directorio
 # 2. Utilizamos el comando TEST (de linux) con la opción -eq porque éste se utiliza para comparar valores numéricos
 clean: ## Eliminar archivos del directorio padre
-	$(BOX_CONFIRM_CLEAN) \
+	$(AT)$(BOX_CONFIRM_CLEAN) \
 	&& test $(EXIT_STATUS) -eq $(EXIT_STATUS_SUCCESS) \
 	&& (echo "Eliminando archivos y directorios del directorio padre.." \
 			&& $(RM) .targets/* \
