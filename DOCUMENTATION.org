@@ -381,3 +381,232 @@ crear-archivo:
 *** Referencias Extraoficiales
     1. [[https://til.zqureshi.in/makefile-oneshell/][Makefile ONESHELL (til.zqureshi.in)]]
     2. [[https://seanbone.ch/makefile-hacks/][Makefile hacks (seanbone.ch)]]
+* ($?) guarda el (Exit Status) Estado de Salida del último comando ejecutado en la Shell
+** Tabla de estados
+  #+NAME: estado-de-salida
+  |-----------------------------+-----------------------|
+  |      Valor de salida (Exit) | Estado de Salida      |
+  |-----------------------------+-----------------------|
+  |                    0 (zero) | ejecución exitosa     |
+  | distinto de cero (non zero) | ejecución fallida     |
+  |-----------------------------+-----------------------|
+  |                           2 | uso incorrecto        |
+  |                         127 | Comando no encontrado |
+  |                         126 | no es un ejecutable   |
+  |-----------------------------+-----------------------|
+** Escenarios en la Terminal de comandos
+*** Estado de salida 0 - Ejecución con éxito
+    #+BEGIN_SRC shell
+      # usamos el comando ls
+      # listamos todos los archivos ó directorios de la ruta actual
+      ls *
+
+      # - preguntamos el estado de salida del último comando ejecutado en la shell (el anterior)
+      # - la salida del comando ls fué el valor entero 0 (representa ejecución exitosa)
+      echo $?
+
+      # podemos probar lo anterior con el condicional if
+      if ls * ; then echo "el comando se ejecutó con éxito!"; fi
+
+      # podemos probar lo anterior con el comando test
+      test $(ls *)  && echo "el comando se ejecutó con éxito!"
+    #+END_SRC
+*** Estado de salida 2 - Ejecución Fallida
+    #+BEGIN_SRC shell
+      # listamos un archivo que no exista por ejemplo 'aaaa'
+      ls aaaa
+
+      # - preguntamos el estado de salida del último comando ejecutado en la shell (el anterior)
+      # - la salida del comando ls fué el valor entero 2 (representa ejecución fallida)
+      echo $?
+
+      # si al comando ls le pasamos una opción inválida, obtendremos el mismo estado de salida (2) como error
+      ls --pompis && echo $?
+
+      # podemos probar lo anterior con el condicional if
+      if ls --pompis 2>/dev/null; then echo "el comando se ejecutó con éxito!"; else echo "ups, el comando tuvo un error al ejecutar"; fi
+
+      # podemos probar lo anterior con el comando test
+      test $(ls --pompis 2>/dev/null) && echo "el comando se ejecutó con éxito!" || echo "ups, el comando tuvo un error al ejecutar"
+    #+END_SRC
+*** Estado de salida 126 - Archivo NO ejecutable
+    #+BEGIN_SRC shell
+      # 1. creamos un programa y le asignamos cualquier acción
+      # 2. luego intentamos ejecutarlo
+      echo "ls" > programa.sh && ./programa.sh
+
+      # - preguntamos el estado de salida del último comando ejecutado en la shell (el anterior)
+      # - la shell devuelve el valor entero 126 (archivo no ejecutable)
+      echo $?
+
+      # NO obtendremos el estado de salida (126) de archivo no ejecutable si le asignamos permisos de ejecución
+      # 1. creamos un programa y le asignamos cualquier acción
+      # 2. le asignamos permisos de ejecución con chmod
+      # 3. luego intentamos ejecutarlo
+      echo "ls" > programa.sh && chmod u+x programa.sh && ./programa.sh && echo $?
+    #+END_SRC
+*** Estado de salida 127 - Comando No encontrado
+    #+BEGIN_SRC shell
+      # ejecutamos en la terminal un comando que no exista, por ejemplo aaaa
+      aaaa
+
+      # - preguntamos el estado de salida del último comando ejecutado en la shell (el anterior),
+      # - la shell devuelve el valor entero 127 (comando no encontrado)
+      echo $?
+
+      # si ejecutamos un programa que no tenemos instalado, obtendremos el mismo estado de salida (127) como error
+      zsh && echo $?
+    #+END_SRC
+** Confusión con valores booleanos true y false
+   #+BEGIN_QUOTE
+   Es común relacionar los valores ~0~ y ~1~ con los valores booleanos ~true~ y ~false~,
+   NO CONFUNDIR esos valores con el *Estado de Salida* (Exit Status) de los comandos linux como ~ls~, ~cat~, ...
+
+   - El estado de salida ~0~ (zero) indíca que el programa se ejecutó de manera correcta
+   - El estado de salida distinto de ~0~ (non-zero) indíca que el programa NO se ejecutó de manera correcta
+   #+END_QUOTE
+
+   #+BEGIN_QUOTE
+   Ejemplos de Estado de Salida ~0~ (ejecución exitosa)
+   - el comando ~ls -l /home/mi-usuario/Documents~ devolverá cero porque es una ruta válida y pudo listar los archivos y directorios
+   - el comando ~echo "hola"~ devolverá cero porque pudo imprimir por (stdin) pantalla la cadena "hola"
+
+  Ojo! No confundir lo que imprime un comando por pantalla con el *Estado de Salida*,
+  éste segundo no se imprime pero se guarda en ~$?~ y lo vemos si ejecutamos ~echo $?~
+   #+END_QUOTE
+
+   #+BEGIN_QUOTE
+   Ejemplos de Estado de salida distinto de ~0~ (ejecución fallida)
+   - el comando ~ls -l /directorio-inventado~ devolverá cero porque NO es una ruta válida
+   - el comando ~ls --opcion-inventada /home/mi-usuario/Documents~ devolverá cero porque le pasamos a ~ls~ una opción que no tiene
+   #+END_QUOTE
+** Escenario en Makefile - Comando test de linux y operador lógico OR
+*** Problema 1 del comando Whiptail- STDOUT
+   #+BEGIN_QUOTE
+   Utilizar el comando de linux ~whiptail~
+   1) éste envía por el ~stdout (1)~ una *caja de dialogo* (su interfaz)
+   2) NO podemos capturar facilmente si eligieron la opción YES o NO porque lo que recibe el ~stdout~ es la propia *interfaz de la caja de dialogo*
+
+   Posible solución
+   - Utilizar el *Estado de Salida* (exit status) del comando ~whiptail~ con ~$?~ (devuelve el estado del último comando ejecutado en la terminal)
+   - Si le pasamos a ~whiptail~ con la opción ~--yesno~ entonces su Estado de salida (exit status) varía según..
+     - si elige la opción ~YES~ será ~0~ (convención de ejecución exitosa)
+     - si elige la opción ~NO~ será ~1~ (distinto de cero, convención si falló la ejecución de un comando)
+   #+END_QUOTE
+*** Problema 2 del comando Whiptail- STDERR
+    #+BEGIN_QUOTE
+   1) escribe sobre el ~stderr (2)~, entonces tenemos redireccionarlo al ~stdout (1)~
+    #+END_QUOTE
+*** Soluciones que fallan
+**** Solución Fallida (1)
+     #+BEGIN_QUOTE
+     Si pensamos la típica solución de *reutilizar la salida de un comando como entrada de otro comando*, con el operador pipe ~|~
+
+     Podriamos pensar lo siguiente (/lo detallo, para entender cual sería la idea y luego comento el porque no funcionaría../)
+     1) usar el operador pipe ~|~ para capturar si la opción elegida por el comando ~whiptail~
+     2) usar el comando ~xargs~ para pasar por parámetro el valor obtenido al comando ~echo~
+     3) usar el comando ~echo~ para imprimirlo por STDOUT y tener una cadena para comparar en el ~ifeq~ de GNU Make
+
+     Lo que REALMENTE sucede..
+     1) usamos el operador pipe ~|~
+        - para capturar la salida del comando ~whiptail~ que se envía a STDOUT (fd 1)
+        - su salida es una caja de diálogo (su interfáz) no es un string ó valor numérico común
+        - el resultado será que la terminal se quedará esperando que finalice ~whiptail~ pero no aparecerá la interfaz en la pantalla
+     2) intentamos usar el comando ~xargs~
+        - para pasar por parámetro el valor STDOUT (fd 1) anterior como entrada STDIN (fd 0) de otro comando (en este caso ~echo~)
+        - el resultado anterior será que imprimirá por pantalla un cuadro de dialogo, nada parecido a lo que queríamos
+
+     Una solución a éste problema es utilizar el Estado de Salida (Exit Status) del último comando ejecutado que se guarda en ~$?~
+     #+END_QUOTE
+
+      #+BEGIN_SRC makefile
+        BOX_CONFIRM=whiptail --title "Eliminar archivos" --yesno "Estas seguro?" 0 0
+        EXIT_STATUS_SUCCESS=0
+
+        clean-txt:
+        ifeq ($(shell $(BOX_CONFIRM) | xargs echo),$(EXIT_STATUS_SUCCESS))
+          echo "Eliminando archivos de texto plano.."
+        endif
+      #+END_SRC
+**** Solución Fallida (2)
+     #+BEGIN_QUOTE
+     Otra forma de entender el problema sería utilizando el comando ~tee~
+     - que muestra por pantalla STDOUT (fd 1) el resultado de un comando
+     - y además redirecciona lo que se envío al STDOUT (fd 1) a un archivo (lo que hacía el operador de redirección ~>~)
+
+     Luego de ejecutar el siguiente target, nos daremos cuenta que lo que guarda será la caja de dialogo,
+     por tanto no llegamos a capturar la respuesta YES o NO
+
+     Una solución a éste problema es utilizar el Estado de Salida (Exit Status) del último comando ejecutado que se guarda en ~$?~
+     #+END_QUOTE
+
+     #+BEGIN_SRC makefile
+        BOX_CONFIRM=whiptail --title "Eliminar archivos" --yesno "Estas seguro?" 0 0
+
+        box-confirm:
+          $(BOX_CONFIRM) | tee resultado.txt \
+          && cat resultado.txt
+     #+END_SRC
+*** Solución estilo GNU Make - ifeq + cambiar el stdout (1) por stderr (2) y viceversa
+    #+BEGIN_SRC makefile
+      BOX_CONFIRM=whiptail --title "Eliminar archivos" --yesno "Estas seguro?" 0 0
+
+      # - el $? NO es una macro de GNU Make, es propio de linux y guarda el "Estado de Salida" del último comando (programa) que se ejecutó en la terminal de linux
+      # - utilizamos $$? en vez de $? para escapar el símbolo $ y que GNU Make lo considere como un caracter común en vez de una macro
+      # (similar como cuando en BASH utilizamos el slash invertido \ para escapar caracteres especiales, en GNU Make usamos $)
+      EXIT_STATUS=$(shell echo $$?)
+
+      # - el valor 0 indíca que el comando de linux se ejecutó con éxito
+      # (pasamos opciones válidas del comando, pasamos parámetros válidos como rutas que existen, ...)
+      EXIT_STATUS_SUCCESS=0
+
+      # PROBLEMA: el comando WHIPTAIL de linux
+      # - utilizamos el operador de redirección > de la forma file-descriptor>&otro-file-descriptor en vez de file-descriptor>archivo-comun.extension
+      # - recordemos que un (fd) File Descriptor también es un archivo, pero son un estándar que los programas utilizan para envíar información
+      #
+      # SOLUCIÓN: 3>&1 1>&2 2>&3
+      # - creamos un nuevo file descriptor (3) pasar el stdout (1) al stderr (2) y el stderr (2) al stdout (1)
+      # sin generar un flujo circular entre el stdout (1) y stderr (2)
+      #
+      # - el stdout (1) recibirá lo que se envíe por defecto al stderr (2)
+      # - el stderr (2) recibirá lo que se envíe por defecto al stdout (1)
+      ifeq ($(shell $(BOX_CONFIRM) 3>&1 1>&2 2>&3 && echo $(EXIT_STATUS)),$(EXIT_STATUS_SUCCESS))
+        echo "Eliminando archivos de texto plano.."
+      endif
+    #+END_SRC
+*** Solución estilo BASH - Comando test
+   #+BEGIN_QUOTE
+   Por que devolvemos el valor ~true~ al final
+   - el comando ~test~ puede provocar que GNU Make lance un error si no utilizamos el operador OR ~||~
+   - el número de error es el Estado de Salida (1) que devuelve el propio comando Test,
+   - en caso de no cumplirse la condición ~$$? -eq 0~ devolvemos el valor booleano ~true~
+
+   El chequeo ~test $? -eq 0~ quizás no es necesario, porque podriamos utilizar el operador AND ~&&~ pero considero que da más contexto
+   #+END_QUOTE
+
+    #+BEGIN_SRC makefile
+      BOX_CONFIRM=whiptail --title "Eliminar archivos" --yesno "Estas seguro?" 0 0
+
+      # - el $? NO es una macro de GNU Make, es propio de linux y guarda el Estado de Salida luego de ejecutar un comando de linux (programas)
+      # - utilizamos $$? en vez de $? para escapar el símbolo $ y que GNU Make lo considere como un caracter en vez de una macro
+      EXIT_STATUS=$(shell echo $$?)
+
+      # - el valor 0 indíca que el comando de linux se ejecutó con éxito
+      # (pasamos opciones válidas del comando, pasamos parámetros válidos como rutas que existen, ...)
+      EXIT_STATUS_SUCCESS=0
+
+      clean-txt: ## Eliminar archivos de texto plano
+        $(BOX_CONFIRM) \
+        && test $(EXIT_STATUS) -eq $(EXIT_STATUS_SUCCESS) \
+        && echo "Eliminando archivos de texto plano.." \
+        || true
+    #+END_SRC
+** Referencias
+*** Referencias Extraoficiales
+    1. [[http://comulinux.blogspot.com/2010/03/estado-de-salida-de-un-comando-bash.html][Estado de Salida de un Comando Bash (comulinux.blogspot.com)]]
+    2. [[https://www.educatica.es/informatica/sistemas-operativos/gnu-linux-bash/estado-de-salida-de-un-comando/][Estado de salida de un comando (educatica.es)]]
+*** Referencias Issues
+    1. [[https://unix.stackexchange.com/questions/42728/what-does-31-12-23-do-in-a-script][what does 3>&1 1>&2 2>&3 do in a script? (unix.stackexchange.com)]]
+    2. [[https://stackoverflow.com/questions/5431909/returning-a-boolean-from-a-bash-function][Check exit status (stackoverflow.com)]]
+    3. [[https://unix.stackexchange.com/questions/400849/echo-or-print-dev-stdin-dev-stdout-dev-stderr][echo /dev/stdin /dev/stdout /dev/stderr (unix.stackexchange.com)]]
+    4. [[https://stackoverflow.com/questions/5431909/returning-a-boolean-from-a-bash-function/43840545#43840545][Shell, returning a boolean from a Bash function (stackoverflow.com)]]
