@@ -495,7 +495,9 @@ crear-archivo:
    #+END_QUOTE
 *** Problema 2 del comando Whiptail- STDERR
     #+BEGIN_QUOTE
-   1) escribe sobre el ~stderr (2)~, entonces tenemos redireccionarlo al ~stdout (1)~
+    El comando de linux ~whiptail~
+    - escribe sobre el ~stderr (fd 2)~ en vez de ~stdout (fd 1)~
+    - tenemos redireccionar el ~stderr (fd 2)~ al ~stdout (fd 1)~
     #+END_QUOTE
 *** Soluciones que fallan
 **** Solución Fallida (1)
@@ -547,7 +549,18 @@ crear-archivo:
           $(BOX_CONFIRM) | tee resultado.txt \
           && cat resultado.txt
      #+END_SRC
-*** Solución estilo GNU Make - ifeq + cambiar el stdout (1) por stderr (2) y viceversa
+*** Solución Casi perfecta estilo GNU Make - ifeq + cambiar el stdout (1) por stderr (2) y viceversa
+    #+BEGIN_QUOTE
+    *PROBLEMA:* el comando ~whiptail~ de linux
+    - utilizamos el operador de redirección ~>~ de la forma ~file-descriptor>&otro-file-descriptor~ en vez de ~file-descriptor>archivo-comun.extension~
+    - recordemos que un (fd) File Descriptor también es un archivo, pero son un estándar que los programas utilizan para envíar información
+
+    *SOLUCIÓN*: ~3>&1 1>&2 2>&3~
+    - creamos un nuevo file descriptor (3) pasar el stdout (1) al stderr (2) y el stderr (2) al stdout (1)
+    - el stdout (1) recibirá lo que se envíe por defecto al stderr (2)
+    - el stderr (2) recibirá lo que se envíe por defecto al stdout (1)
+    #+END_QUOTE
+
     #+BEGIN_SRC makefile
       BOX_CONFIRM=whiptail --title "Eliminar archivos" --yesno "Estas seguro?" 0 0
 
@@ -560,16 +573,11 @@ crear-archivo:
       # (pasamos opciones válidas del comando, pasamos parámetros válidos como rutas que existen, ...)
       EXIT_STATUS_SUCCESS=0
 
-      # PROBLEMA: el comando WHIPTAIL de linux
-      # - utilizamos el operador de redirección > de la forma file-descriptor>&otro-file-descriptor en vez de file-descriptor>archivo-comun.extension
-      # - recordemos que un (fd) File Descriptor también es un archivo, pero son un estándar que los programas utilizan para envíar información
-      #
-      # SOLUCIÓN: 3>&1 1>&2 2>&3
-      # - creamos un nuevo file descriptor (3) pasar el stdout (1) al stderr (2) y el stderr (2) al stdout (1)
-      # sin generar un flujo circular entre el stdout (1) y stderr (2)
-      #
-      # - el stdout (1) recibirá lo que se envíe por defecto al stderr (2)
-      # - el stderr (2) recibirá lo que se envíe por defecto al stdout (1)
+      # - esta solución es "casi" perfecta, pero realmente NO funciona del todo bien..
+      # - cada vez que ejecute cualquier target, se evaluará el comando shell dentro del ifeq
+      # por tanto aparecerá por pantalla (stdout) el cuadro de dialogo del whiptail,
+      # apesar de no haber ejecutado el target clean
+      clean:
       ifeq ($(shell $(BOX_CONFIRM) 3>&1 1>&2 2>&3 && echo $(EXIT_STATUS)),$(EXIT_STATUS_SUCCESS))
         echo "Eliminando archivos de texto plano.."
       endif
