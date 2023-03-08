@@ -556,8 +556,12 @@ crear-archivo:
     - recordemos que un (fd) File Descriptor también es un archivo, pero son un estándar que los programas utilizan para envíar información
 
     *SOLUCIÓN*: ~3>&1 1>&2 2>&3~
-    - creamos un nuevo file descriptor (3) pasar el stdout (1) al stderr (2) y el stderr (2) al stdout (1)
-    - el stdout (1) recibirá lo que se envíe por defecto al stderr (2)
+    1) creamos un file descriptor (3) que apunta al stdout (1)
+    2) redireccionamos el stdout (1) al stderr (2)
+    3) redireccionamos el stderr (2) al file descriptor (3) que creamos, que apuntaba al stdout (1)
+
+    Con lo anterior nos quedaría
+    - el stdout (1) recibirá lo que se envíe por defecto al stderr (2), es importante porque es dónde escribirá ~whiptail~
     - el stderr (2) recibirá lo que se envíe por defecto al stdout (1)
     #+END_QUOTE
 
@@ -618,3 +622,35 @@ crear-archivo:
     2. [[https://stackoverflow.com/questions/5431909/returning-a-boolean-from-a-bash-function][Check exit status (stackoverflow.com)]]
     3. [[https://unix.stackexchange.com/questions/400849/echo-or-print-dev-stdin-dev-stdout-dev-stderr][echo /dev/stdin /dev/stdout /dev/stderr (unix.stackexchange.com)]]
     4. [[https://stackoverflow.com/questions/5431909/returning-a-boolean-from-a-bash-function/43840545#43840545][Shell, returning a boolean from a Bash function (stackoverflow.com)]]
+* Cajas de dialogo en la terminal de Linux
+** Programas
+*** Boxes
+    - sólo imprime texto, no tiene interacción con el usuario
+*** Whiptail y Dialog
+    - muestran cajas de dialogo para interactuar con el usuario
+    - la interacción con el usuario es mediante la terminal de linux
+*** Zenity
+    - muestra cajas de dialogo para interactuar con el usuario
+    - la interacción con el usuario es mediante una interfáz gráfica (GUI) basada en *GTK toolkit*
+** Escenarios Básicos con Whiptail
+   #+BEGIN_SRC makefile
+     borrar-txt:
+       whiptail --yesno "Confirmar acción?" 0 0 --title "Borrar archivos" 3>&1 1>&2 2>&3 \
+       && test $$? -eq 0 \
+       && echo "Borrando ficheros.."  && rm -rfv *.txt \
+       || true
+
+     solicitar-nombre:
+       whiptail --inputbox "Cual es tu nombre?" 25 80 --title "Solicitud de datos" 3>&1 1>&2 2>&3 \
+       | xargs -I % echo "Bienvenido %"
+
+     .PHONY: borrar-txt solicitar-nombre
+   #+END_SRC
+** Referencias
+*** Referencias Destacadas
+    1. [[https://www.redhat.com/sysadmin/use-whiptail][How to use whiptail to create more user-friendly interactive scripts (redhat.com)]]
+*** Otras Referencias
+    1. [[https://ostechnix.com/zenity-create-gui-dialog-boxes-in-bash-scripts/][Zenity create GUI Dialog Boxes in bash scripts (ostechnix.com)]]
+    2. [[https://ostechnix.com/create-gui-dialog-boxes-in-bash-scripts-with-whiptail/][Create GUI Dialog Boxes In Bash Scripts With Whiptail (ostechnix.com)]]
+    3. [[https://funprojects.blog/2022/04/06/text-interfaces-with-whiptail-and-dialog/][Text Interfaces with Whiptail and Dialog (funprojects.blog)]]
+    4. [[https://www.geeksforgeeks.org/creating-dialog-boxes-with-the-dialog-tool-in-linux/][Creating dialog boxes with the dialog tool in linux (geeksforgeeks.org)]]
