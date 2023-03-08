@@ -179,7 +179,63 @@
    #+END_QUOTE
 ** Referencias
 * Comando test de bash
-** Escenario
+** Tabla de Operadores
+   #+NAME: operadores-bash-vs-sh
+   | Operador | Descripción                                                            |
+   |----------+------------------------------------------------------------------------|
+   | ~=~      | Comparación de strings (más portable, especificaciones de POSIX Shell) |
+   | ~==~     | Comparación de strings (menos portable, específico para BASH Shell)    |
+   |----------+------------------------------------------------------------------------|
+   | -eq      | comparación de números                                                 |
+
+   #+BEGIN_QUOTE
+   Las especificaciones de POSIX Shell
+   - se evalúan desde ~/bin/sh~
+   - los scripts empiezan con ~#!/bin/sh/~
+
+   Las especificaciones de BASH Shell
+   - se evalúan desde ~/bin/bash~
+   - los scripts empiezan con ~#!/bin/bash/~
+   #+END_QUOTE
+** Escenarios en la terminal
+*** Comparando strings - con Estado de salida 0 (exitosa)
+    #+BEGIN_QUOTE
+    Es importante el espaciado entre los símbolos delimitadores del predicado (condición booleana) ya sea que utilicemos la sintáxis de la forma
+    - ~[ predicado ]~
+    - ó ~[[ predicado ]]~
+    - ó ~(( predicado ))~
+    #+END_QUOTE
+
+   #+BEGIN_SRC shell
+     # el Estado de Salida de evaluar los siguientes predicados será 0 (cero, porque tuvo éxito, se cumplió la igualdad)
+
+     # 1. si comparamos strings con [ predicado ] con el operador =
+     # (la forma más recomendada, es portable)
+     [ "a" = "a" ]; echo $?
+
+     # 2. si comparamos strings con [ predicado ] con el operador ==
+     [ "a" == "a" ]; echo $?
+
+     # 3. si comparamos strings con [[ predicado ]] con el operador ==
+     [[ "a" == "a" ]]; echo $?
+
+     # Si comparamos cadenas distintas "a" y "b"
+     # el estado de salida de evaluar la comparación será distinto de 0 (cero)
+     [ "a" = "b" ]; echo $?
+     [ "a" == "b" ]; echo $?
+     [[ "a" == "b" ]]; echo $?
+   #+END_SRC
+*** Comparando valores numéricos - Con Estado de salida distinta de cero (no tuvo éxito la comparación)
+    #+BEGIN_SRC shell
+      # el Estado de Salida de evaluar los siguientes predicados será distinto de cero (porque falló la comparación)
+
+      [ 1 -eq 2 ]; echo $?
+
+      (( 1==2 )); echo $?
+
+      test 1 -eq 2; echo $?
+    #+END_SRC
+** Escenario con Makefile
    #+BEGIN_SRC makefile
      DIRECTORIO=alumnos
      ARCHIVO=algebra.txt
@@ -272,6 +328,7 @@
     5. [[https://blog.desdelinux.net/shell-bash-y-scripts-todo-sobre-shell-scripting/][shell bash y scripts todo sobre shell scripting (blog.desdelinux.net)]]
 *** Referencias Issues
     1. [[https://unix.stackexchange.com/questions/42728/what-does-31-12-23-do-in-a-script][what does 3>&1 1>&2 2>&3 do in a script (unix.stackexchange.com)]]
+    2. [[https://stackoverflow.com/questions/20449543/shell-equality-operators-eq][Shell equality operators =, ==, -eq (stackoverflow.com)]]
 * GNU Make ONESHELL ejecutar comandos en una shell
 ** Escenario
    #+BEGIN_QUOTE
