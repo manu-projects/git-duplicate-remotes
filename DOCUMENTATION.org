@@ -647,6 +647,8 @@ crear-archivo:
      .PHONY: borrar-txt solicitar-nombre
    #+END_SRC
 ** Referencias
+*** Referencias Oficiales
+    1. [[https://boxes.thomasjensen.com/box-designs.html][Box design (boxes.thomasjensen.com)]]
 *** Referencias Destacadas
     1. [[https://www.redhat.com/sysadmin/use-whiptail][How to use whiptail to create more user-friendly interactive scripts (redhat.com)]]
 *** Otras Referencias
@@ -654,3 +656,5 @@ crear-archivo:
     2. [[https://ostechnix.com/create-gui-dialog-boxes-in-bash-scripts-with-whiptail/][Create GUI Dialog Boxes In Bash Scripts With Whiptail (ostechnix.com)]]
     3. [[https://funprojects.blog/2022/04/06/text-interfaces-with-whiptail-and-dialog/][Text Interfaces with Whiptail and Dialog (funprojects.blog)]]
     4. [[https://www.geeksforgeeks.org/creating-dialog-boxes-with-the-dialog-tool-in-linux/][Creating dialog boxes with the dialog tool in linux (geeksforgeeks.org)]]
+*** Referencias Issues
+    1. [[https://unix.stackexchange.com/questions/144924/how-can-i-create-a-message-box-from-the-command-line][How can I create a message box from the command line (unix.stackexchange.com)]]
